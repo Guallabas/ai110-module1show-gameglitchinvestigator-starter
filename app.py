@@ -43,16 +43,16 @@ def check_guess(guess, secret):
 
     try:
         if guess > secret:
-            return "Too High", "� Go LOWER!"
+            return "Too High", "⬇️ Go LOWER!"
         else:
-            return "Too Low", "📈 Go HIGHER!"
+            return "Too Low", "⬆️ Go HIGHER!"
     except TypeError:
         g = str(guess)
         if g == secret:
             return "Win", "🎉 Correct!"
         if g > secret:
-            return "Too High", "� Go LOWER!"
-        return "Too Low", "📈 Go HIGHER!"
+            return "Too High", "⬇️ Go LOWER!"
+        return "Too Low", "⬆️ Go HIGHER!"
 
 
 def update_score(current_score: int, outcome: str, attempt_number: int):
@@ -71,6 +71,28 @@ def update_score(current_score: int, outcome: str, attempt_number: int):
         return current_score - 5
 
     return current_score
+
+
+def get_hot_cold_feedback(guess, secret, low, high):
+    """
+    Calculate how 'hot' or 'cold' a guess is based on distance to secret.
+    Returns a tuple: (emoji, description)
+    """
+    range_size = high - low
+    distance = abs(guess - secret)
+    
+    if distance == 0:
+        return "🔥🔥🔥", "BOILING - Exact match!"
+    elif distance <= range_size * 0.1:  # Within 10% of range
+        return "🔥🔥", "Very Hot!"
+    elif distance <= range_size * 0.25:  # Within 25% of range
+        return "🔥", "Hot"
+    elif distance <= range_size * 0.5:  # Within 50% of range
+        return "🌡️", "Warm"
+    elif distance <= range_size * 0.75:  # Within 75% of range
+        return "❄️", "Cold"
+    else:
+        return "❄️❄️", "Very Cold"
 
 st.set_page_config(page_title="Glitchy Guesser", page_icon="🎮")
 
@@ -114,9 +136,14 @@ if "history" not in st.session_state:
 
 st.subheader("Make a guess")
 
+# Progress bar showing attempts remaining
+attempts_remaining = attempt_limit - st.session_state.attempts
+progress_pct = max(0, attempts_remaining / attempt_limit)
+st.progress(progress_pct, text=f"Attempts: {max(0, attempts_remaining)}/{attempt_limit}")
+
 st.info(
-    f"Guess a number between 1 and 100. "
-    f"Attempts left: {attempt_limit - st.session_state.attempts}"
+    f"Guess a number between {low} and {high}. "
+    f"Attempts left: {max(0, attempts_remaining)}"
 )
 
 with st.expander("Developer Debug Info"):
@@ -169,9 +196,12 @@ if submit:
             secret = st.session_state.secret
 
         outcome, message = check_guess(guess_int, secret)
+        
+        # Get hot/cold feedback
+        hot_cold_emoji, hot_cold_desc = get_hot_cold_feedback(guess_int, st.session_state.secret, low, high)
 
         if show_hint:
-            st.warning(message)
+            st.warning(f"{message}\n{hot_cold_emoji} {hot_cold_desc}")
 
         st.session_state.score = update_score(
             current_score=st.session_state.score,
@@ -194,6 +224,33 @@ if submit:
                     f"The secret was {st.session_state.secret}. "
                     f"Score: {st.session_state.score}"
                 )
+
+# Session history table
+if st.session_state.history:
+    st.divider()
+    st.subheader("📊 Game Session Summary")
+    
+    history_data = []
+    for idx, guess in enumerate(st.session_state.history, 1):
+        if isinstance(guess, int):
+            hot_cold_emoji, hot_cold_desc = get_hot_cold_feedback(guess, st.session_state.secret, low, high)
+            if guess == st.session_state.secret:
+                hint = "✅ Correct!"
+            elif guess > st.session_state.secret:
+                hint = "⬇️ Too High"
+            else:
+                hint = "⬆️ Too Low"
+            distance = abs(guess - st.session_state.secret)
+            history_data.append({
+                "Attempt": idx,
+                "Guess": guess,
+                "Feedback": hint,
+                "Distance": distance,
+                "Temperature": f"{hot_cold_emoji} {hot_cold_desc}"
+            })
+    
+    if history_data:
+        st.dataframe(history_data, use_container_width=True)
 
 st.divider()
 st.caption("Built by an AI that claims this code is production-ready.")
