@@ -1,13 +1,17 @@
 import random
 import streamlit as st
 
+#Bug 4: When clicking section normal it says 1 to 100 and when I click hard it says 1 to 50. I guess it should be backwards.
+#Fixed with Auto. I just switched the ranges for normal and hard in the get_range_for_difficulty function. 
+# Now normal is 1 to 50 and hard is 1 to 100.
+
 def get_range_for_difficulty(difficulty: str):
     if difficulty == "Easy":
         return 1, 20
     if difficulty == "Normal":
-        return 1, 100
-    if difficulty == "Hard":
         return 1, 50
+    if difficulty == "Hard":
+        return 1, 100
     return 1, 100
 
 
@@ -28,6 +32,10 @@ def parse_guess(raw: str):
 
     return True, value, None
 
+#Fifth bug. When I put hard mode. The secret was 18 and when I put 50 it said to go higher instead of saying go lower.
+#FIXED With Auto and The sentences were backwords and fixed the part of comparisons becasue sometimes the secret is a 
+# string and sometimes it is an int. So I made it so that if the attempt number is even then the secret is a string
+# and if it is odd then the secret is an int. This way it will be consistent with the comparisons and the messages will be correct.
 
 def check_guess(guess, secret):
     if guess == secret:
@@ -35,16 +43,16 @@ def check_guess(guess, secret):
 
     try:
         if guess > secret:
-            return "Too High", "📈 Go HIGHER!"
+            return "Too High", "� Go LOWER!"
         else:
-            return "Too Low", "📉 Go LOWER!"
+            return "Too Low", "📈 Go HIGHER!"
     except TypeError:
         g = str(guess)
         if g == secret:
             return "Win", "🎉 Correct!"
         if g > secret:
-            return "Too High", "📈 Go HIGHER!"
-        return "Too Low", "📉 Go LOWER!"
+            return "Too High", "� Go LOWER!"
+        return "Too Low", "📈 Go HIGHER!"
 
 
 def update_score(current_score: int, outcome: str, attempt_number: int):
